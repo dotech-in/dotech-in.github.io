@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Ajanda kaydı</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f3ecdc;margin:0;padding:24px;color:#2b2418}
+  .k{background:#fffaf0;border-radius:18px;border:1px solid #ddd0b4;border-left:6px solid #4e7a32;padding:18px}
+  .t{font-size:12px;letter-spacing:1px;color:#8a7d66;font-weight:700}
+  h1{font-family:Georgia,serif;font-size:24px;margin:6px 0 10px}
+  p{margin:6px 0;color:#5b4f3c;white-space:pre-wrap}
+  a.b{display:block;text-align:center;margin-top:16px;padding:14px;border-radius:999px;text-decoration:none;font-weight:700}
+  .a{background:#4e7a32;color:#fff}.g{background:#fff;color:#4e7a32;border:1px solid #4e7a32}
+  small{display:block;margin-top:14px;color:#8a7d66;text-align:center}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div id="kart" class="k">
+  <div class="t" id="tur">KAYIT</div>
+  <h1 id="baslik">Kayıt okunamadı</h1>
+  <p id="tarih"></p><p id="konum"></p><p id="aciklama"></p>
+</div>
+<a class="b a" id="ac" href="#">Ajanda'da aç</a>
+<a class="b g hide" id="gt" target="_blank" rel="noopener">Google Takvim'e ekle</a>
+<small>Ajanda'da aç düğmesi, telefonunda Ajanda yüklüyse çalışır.</small>
+<script>
+(function () {
+  // Kayıt bilgisi adresin # kısmında durur; bu kısım sunucuya hiç gönderilmez.
+  var h = location.hash.replace(/^#/, '');
+  var m = h.match(/(?:^|&)k=([^&]*)/);
+  var blok = '';
+  try { blok = m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : ''; } catch (e) { blok = ''; }
+  if (!blok) { document.getElementById('ac').className += ' hide'; return; }
+
+  var v = {};
+  blok.split(/\r?\n/).forEach(function (s) {
+    var x = s.match(/^\s*([^:]{2,20}):\s*(.*)$/);
+    if (x) v[x[1].trim().toLocaleLowerCase('tr-TR')] = x[2].trim();
+  });
+  var baslik = v['başlık'] || 'Ajanda kaydı';
+  var saat = v['saat'] || '', tarih = v['tarih'] || '';
+  var konum = (v['konum'] || '').split('|')[0].trim();
+  var aciklama = v['açıklama'] || '';
+  document.title = baslik + ' — Ajanda';
+  document.getElementById('tur').textContent = v['tür'] === 'randevu' ? 'RANDEVU' : 'GÖREV';
+  document.getElementById('baslik').textContent = baslik;
+  document.getElementById('tarih').textContent = tarih ? '📅 ' + tarih + (saat ? ', ' + saat : '') : '';
+  document.getElementById('konum').textContent = konum ? '📍 ' + konum : '';
+  document.getElementById('aciklama').textContent = aciklama ? '📝 ' + aciklama : '';
+
+  var k = encodeURIComponent(blok);
+  var android = /Android/i.test(navigator.userAgent);
+  var geri = location.origin + location.pathname + '?n=1#k=' + k;
+  var uygulama = android
+    ? 'intent://ekle?k=' + k + '#Intent;scheme=ajanda;package=com.ahmet.ajanda;S.browser_fallback_url=' + encodeURIComponent(geri) + ';end'
+    : 'ajanda://ekle?k=' + k;
+  document.getElementById('ac').href = uygulama;
+
+  var t = tarih.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (t) {
+    var p2 = function (n) { return String(n).padStart(2, '0'); };
+    var fmt = function (d) { return d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()); };
+    var dates;
+    if (/^\d{2}:\d{2}$/.test(saat)) {
+      var bas = new Date(+t[3], +t[2] - 1, +t[1], +saat.slice(0, 2), +saat.slice(3, 5));
+      var bit = new Date(bas.getTime() + 3600000);
+      var hm = function (d) { return 'T' + p2(d.getHours()) + p2(d.getMinutes()) + '00'; };
+      dates = fmt(bas) + hm(bas) + '/' + fmt(bit) + hm(bit);
+    } else {
+      var g = new Date(+t[3], +t[2] - 1, +t[1]);
+      dates = fmt(g) + '/' + fmt(new Date(+t[3], +t[2] - 1, +t[1] + 1));
+    }
+    var gt = document.getElementById('gt');
+    gt.href = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(baslik)
+      + '&dates=' + dates + '&ctz=Europe/Istanbul'
+      + (aciklama ? '&details=' + encodeURIComponent(aciklama) : '')
+      + (konum ? '&location=' + encodeURIComponent(konum) : '');
+    gt.className = gt.className.replace(' hide', '');
+  }
+
+  // Sayfa açılınca Ajanda'yı bir kez kendiliğinden açmayı dene (geri dönüşte tekrar deneme).
+  if (android && !/[?&]n=1/.test(location.search)) {
+    setTimeout(function () { location.href = uygulama; }, 300);
+  }
+})();
+</script>
+</body>
+</html>
