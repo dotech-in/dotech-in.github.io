@@ -27,13 +27,31 @@
 <a class="b g hide" id="gt" target="_blank" rel="noopener">Google Takvim'e ekle</a>
 <small>Ajanda'da aç düğmesi, telefonunda Ajanda yüklüyse çalışır.</small>
 <script>
+var SUNUCU = 'https://script.google.com/macros/s/AKfycbzsgNON9FUHxuzcDJxFQ7sONfDOBFK0eDc8sYrUiUh_0qOm2Exl06UpAu1ly2NxPjDvIQ/exec';
 (function () {
   // Kayıt bilgisi adresin # kısmında durur; bu kısım sunucuya hiç gönderilmez.
   var h = location.hash.replace(/^#/, '');
   var m = h.match(/(?:^|&)k=([^&]*)/);
+  var kod = (h.match(/(?:^|&)c=([A-Za-z0-9]{5,12})/) || [])[1];
   var blok = '';
   try { blok = m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : ''; } catch (e) { blok = ''; }
+  if (kod && !blok) {
+    // 56: kısa kodlu bağlantı; kaydı Ajanda sunucusundan oku.
+    document.getElementById('baslik').textContent = 'Yükleniyor…';
+    fetch(SUNUCU + '?kart=' + kod).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.ok && j.blok) goster(j.blok, '#c=' + kod);
+      else { document.getElementById('baslik').textContent = 'Kayıt bulunamadı'; document.getElementById('ac').className += ' hide'; }
+    }).catch(function () {
+      document.getElementById('baslik').textContent = 'Kayıt yüklenemedi, internet bağlantını kontrol et';
+      document.getElementById('ac').className += ' hide';
+    });
+    return;
+  }
   if (!blok) { document.getElementById('ac').className += ' hide'; return; }
+  goster(blok, '#k=' + encodeURIComponent(blok));
+  })();
+
+function goster(blok, geriHash) {
 
   var v = {};
   blok.split(/\r?\n/).forEach(function (s) {
@@ -53,7 +71,7 @@
 
   var k = encodeURIComponent(blok);
   var android = /Android/i.test(navigator.userAgent);
-  var geri = location.origin + location.pathname + '?n=1#k=' + k;
+  var geri = location.origin + location.pathname + '?n=1' + geriHash;
   var uygulama = android
     ? 'intent://ekle?k=' + k + '#Intent;scheme=ajanda;package=com.ahmet.ajanda;S.browser_fallback_url=' + encodeURIComponent(geri) + ';end'
     : 'ajanda://ekle?k=' + k;
@@ -85,7 +103,7 @@
   if (android && !/[?&]n=1/.test(location.search)) {
     setTimeout(function () { location.href = uygulama; }, 300);
   }
-})();
+}
 </script>
 </body>
 </html>
