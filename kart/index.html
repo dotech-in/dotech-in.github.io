@@ -27,7 +27,9 @@
 <a class="b g hide" id="gt" target="_blank" rel="noopener">Google Takvim'e ekle</a>
 <small>Ajanda'da aç düğmesi, telefonunda Ajanda yüklüyse çalışır.</small>
 <script>
-var SUNUCU = 'https://script.google.com/macros/s/AKfycbzsgNON9FUHxuzcDJxFQ7sONfDOBFK0eDc8sYrUiUh_0qOm2Exl06UpAu1ly2NxPjDvIQ/exec';
+var SUNUCU = 'https://script.google.com/macros/s/AKfycbzfHglh_YiS2l-fi7XPPQeSDdKtNRlEEtAaVPuikhYx5vE6z2HRIHtrt8vZnms0hQg/exec';
+// Eski hesaptaki sunucu: önceki kısa bağlantılar orada kayıtlı.
+var ESKI_SUNUCU = 'https://script.google.com/macros/s/AKfycbzsgNON9FUHxuzcDJxFQ7sONfDOBFK0eDc8sYrUiUh_0qOm2Exl06UpAu1ly2NxPjDvIQ/exec';
 (function () {
   // Kayıt bilgisi adresin # kısmında durur; bu kısım sunucuya hiç gönderilmez.
   var h = location.hash.replace(/^#/, '');
@@ -38,7 +40,10 @@ var SUNUCU = 'https://script.google.com/macros/s/AKfycbzsgNON9FUHxuzcDJxFQ7sONfD
   if (kod && !blok) {
     // 56: kısa kodlu bağlantı; kaydı Ajanda sunucusundan oku.
     document.getElementById('baslik').textContent = 'Yükleniyor…';
-    fetch(SUNUCU + '?kart=' + kod).then(function (r) { return r.json(); }).then(function (j) {
+    var oku = function (u) { return fetch(u + '?kart=' + kod).then(function (r) { return r.json(); }); };
+    oku(SUNUCU).catch(function () { return null; }).then(function (j) {
+      return (j && j.ok && j.blok) ? j : oku(ESKI_SUNUCU).catch(function () { return j; });
+    }).then(function (j) {
       if (j && j.ok && j.blok) goster(j.blok, '#c=' + kod);
       else { document.getElementById('baslik').textContent = 'Kayıt bulunamadı'; document.getElementById('ac').className += ' hide'; }
     }).catch(function () {
